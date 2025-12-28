@@ -1,0 +1,384 @@
+{
+  "schema_version": "1.0.0",
+  "description": "EvolveFlow 系统核心数据结构定义",
+
+  "node_types": {
+    "thought": {
+      "type": "thought",
+      "description": "推理节点 - AI 的思考过程",
+      "schema": {
+        "id": "string (uuid)",
+        "type": "thought",
+        "position": {"x": "number", "y": "number"},
+        "data": {
+          "label": "string",
+          "content": "string (推理内容)",
+          "timestamp": "ISO 8601 datetime",
+          "status": "enum: [pending, processing, completed, failed]"
+        }
+      },
+      "example": {
+        "id": "node-thought-1",
+        "type": "thought",
+        "position": {"x": 100, "y": 100},
+        "data": {
+          "label": "分析用户需求",
+          "content": "用户需要获取天气信息，我需要调用天气 API",
+          "timestamp": "2025-12-28T10:00:00Z",
+          "status": "completed"
+        }
+      }
+    },
+
+    "act": {
+      "type": "act",
+      "description": "行动节点 - 工具调用",
+      "schema": {
+        "id": "string (uuid)",
+        "type": "act",
+        "position": {"x": "number", "y": "number"},
+        "data": {
+          "label": "string",
+          "tool_name": "string (MCP 工具名称)",
+          "tool_description": "string",
+          "input_schema": "JSON Schema object",
+          "input_params": "object (实际传入参数)",
+          "output": "any (工具执行结果)",
+          "status": "enum: [pending, executing, success, error]",
+          "error_message": "string (可选)",
+          "timestamp": "ISO 8601 datetime"
+        }
+      },
+      "example": {
+        "id": "node-act-1",
+        "type": "act",
+        "position": {"x": 300, "y": 100},
+        "data": {
+          "label": "获取天气",
+          "tool_name": "get_weather",
+          "tool_description": "获取指定城市的天气信息",
+          "input_schema": {
+            "type": "object",
+            "properties": {
+              "city": {"type": "string", "description": "城市名称"},
+              "unit": {"type": "string", "enum": ["celsius", "fahrenheit"]}
+            },
+            "required": ["city"]
+          },
+          "input_params": {
+            "city": "北京",
+            "unit": "celsius"
+          },
+          "output": {
+            "temperature": 15,
+            "condition": "晴"
+          },
+          "status": "success",
+          "timestamp": "2025-12-28T10:01:00Z"
+        }
+      }
+    },
+
+    "observe": {
+      "type": "observe",
+      "description": "观察节点 - 环境反馈",
+      "schema": {
+        "id": "string (uuid)",
+        "type": "observe",
+        "position": {"x": "number", "y": "number"},
+        "data": {
+          "label": "string",
+          "observation": "any (从 Act 节点接收的结果)",
+          "interpretation": "string (对观察结果的解释)",
+          "needs_evolution": "boolean (是否触发进化)",
+          "timestamp": "ISO 8601 datetime"
+        }
+      },
+      "example": {
+        "id": "node-observe-1",
+        "type": "observe",
+        "position": {"x": 500, "y": 100},
+        "data": {
+          "label": "处理天气结果",
+          "observation": {
+            "temperature": 15,
+            "condition": "晴"
+          },
+          "interpretation": "成功获取北京天气：15°C，晴天",
+          "needs_evolution": false,
+          "timestamp": "2025-12-28T10:01:30Z"
+        }
+      }
+    },
+
+    "skill": {
+      "type": "skill",
+      "description": "技能节点 - 已学会的复合能力",
+      "schema": {
+        "id": "string (uuid)",
+        "type": "skill",
+        "position": {"x": "number", "y": "number"},
+        "data": {
+          "label": "string",
+          "skill_id": "string (引用技能库中的技能)",
+          "inputs": "object (输入参数)",
+          "outputs": "object (输出结果)",
+          "status": "enum: [ready, executing, completed, failed]",
+          "timestamp": "ISO 8601 datetime"
+        }
+      },
+      "example": {
+        "id": "node-skill-1",
+        "type": "skill",
+        "position": {"x": 700, "y": 100},
+        "data": {
+          "label": "天气查询技能",
+          "skill_id": "skill-weather-query",
+          "inputs": {"city": "上海"},
+          "outputs": {"result": "上海今天 20°C，多云"},
+          "status": "completed",
+          "timestamp": "2025-12-28T10:02:00Z"
+        }
+      }
+    }
+  },
+
+  "edge_types": {
+    "default": {
+      "type": "default",
+      "description": "标准连接 - 数据流动",
+      "schema": {
+        "id": "string (uuid)",
+        "source": "string (源节点 ID)",
+        "target": "string (目标节点 ID)",
+        "type": "default",
+        "animated": "boolean (是否显示动画)",
+        "label": "string (可选)"
+      },
+      "example": {
+        "id": "edge-1",
+        "source": "node-thought-1",
+        "target": "node-act-1",
+        "type": "default",
+        "animated": true,
+        "label": "决策"
+      }
+    },
+
+    "evolution": {
+      "type": "evolution",
+      "description": "进化连接 - 触发自进化",
+      "schema": {
+        "id": "string (uuid)",
+        "source": "string (源节点 ID)",
+        "target": "string (目标节点 ID)",
+        "type": "evolution",
+        "animated": true,
+        "style": {
+          "stroke": "#ff6b6b",
+          "strokeWidth": 2,
+          "strokeDasharray": "5,5"
+        },
+        "data": {
+          "evolution_reason": "string (进化原因)",
+          "timestamp": "ISO 8601 datetime"
+        }
+      },
+      "example": {
+        "id": "edge-evolution-1",
+        "source": "node-observe-1",
+        "target": "node-thought-2",
+        "type": "evolution",
+        "animated": true,
+        "style": {
+          "stroke": "#ff6b6b",
+          "strokeWidth": 2,
+          "strokeDasharray": "5,5"
+        },
+        "data": {
+          "evolution_reason": "工具调用失败，需要生成新代码",
+          "timestamp": "2025-12-28T10:03:00Z"
+        }
+      }
+    }
+  },
+
+  "skill_definition": {
+    "description": "技能库中的技能定义",
+    "schema": {
+      "skill_id": "string (uuid)",
+      "name": "string",
+      "description": "string",
+      "category": "string",
+      "created_at": "ISO 8601 datetime",
+      "success_count": "number (成功使用次数)",
+      "workflow": {
+        "nodes": "array of node objects",
+        "edges": "array of edge objects"
+      },
+      "input_schema": "JSON Schema object",
+      "output_schema": "JSON Schema object",
+      "code": "string (可选 - Code as Action)"
+    },
+    "example": {
+      "skill_id": "skill-weather-query",
+      "name": "天气查询技能",
+      "description": "自动查询指定城市的天气并格式化输出",
+      "category": "信息查询",
+      "created_at": "2025-12-28T09:00:00Z",
+      "success_count": 15,
+      "workflow": {
+        "nodes": [
+          {
+            "id": "thought-1",
+            "type": "thought",
+            "data": {"content": "解析城市参数"}
+          },
+          {
+            "id": "act-1",
+            "type": "act",
+            "data": {"tool_name": "get_weather"}
+          },
+          {
+            "id": "observe-1",
+            "type": "observe",
+            "data": {"interpretation": "格式化天气结果"}
+          }
+        ],
+        "edges": [
+          {"source": "thought-1", "target": "act-1"},
+          {"source": "act-1", "target": "observe-1"}
+        ]
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "city": {"type": "string"}
+        },
+        "required": ["city"]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "result": {"type": "string"}
+        }
+      }
+    }
+  },
+
+  "mcp_tool_config": {
+    "description": "MCP (Model Context Protocol) 工具配置",
+    "schema": {
+      "name": "string (工具名称)",
+      "description": "string",
+      "input_schema": "JSON Schema object",
+      "endpoint": "string (API 端点，可选)",
+      "handler": "string (处理函数名称，可选)",
+      "timeout": "number (超时时间，秒)",
+      "retry_policy": {
+        "max_retries": "number",
+        "backoff": "enum: [linear, exponential]"
+      }
+    },
+    "example": {
+      "name": "get_weather",
+      "description": "获取指定城市的实时天气信息",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "city": {
+            "type": "string",
+            "description": "城市名称"
+          },
+          "unit": {
+            "type": "string",
+            "enum": ["celsius", "fahrenheit"],
+            "default": "celsius"
+          }
+        },
+        "required": ["city"]
+      },
+      "endpoint": "/api/tools/weather",
+      "handler": "handle_weather_request",
+      "timeout": 30,
+      "retry_policy": {
+        "max_retries": 3,
+        "backoff": "exponential"
+      }
+    }
+  },
+
+  "evolution_record": {
+    "description": "自进化记录",
+    "schema": {
+      "evolution_id": "string (uuid)",
+      "timestamp": "ISO 8601 datetime",
+      "trigger": {
+        "node_id": "string (触发节点 ID)",
+        "error_type": "string",
+        "error_message": "string"
+      },
+      "proposal": {
+        "approach": "string (提议的解决方案)",
+        "code": "string (生成的代码，Code as Action)",
+        "estimated_complexity": "enum: [low, medium, high]"
+      },
+      "evaluation": {
+        "test_passed": "boolean",
+        "performance_score": "number (0-1)",
+        "feedback": "string"
+      },
+      "update": {
+        "new_skill_created": "boolean",
+        "skill_id": "string (可选)",
+        "nodes_added": "array of node IDs",
+        "edges_added": "array of edge IDs"
+      }
+    },
+    "example": {
+      "evolution_id": "evo-001",
+      "timestamp": "2025-12-28T10:05:00Z",
+      "trigger": {
+        "node_id": "node-act-5",
+        "error_type": "ToolNotFound",
+        "error_message": "工具 'parse_complex_json' 不存在"
+      },
+      "proposal": {
+        "approach": "生成自定义 JSON 解析函数",
+        "code": "def parse_complex_json(data):\n    # 自动生成的解析逻辑\n    return parsed_data",
+        "estimated_complexity": "medium"
+      },
+      "evaluation": {
+        "test_passed": true,
+        "performance_score": 0.85,
+        "feedback": "成功解析复杂 JSON 结构"
+      },
+      "update": {
+        "new_skill_created": true,
+        "skill_id": "skill-json-parser",
+        "nodes_added": ["node-skill-json-parser"],
+        "edges_added": ["edge-to-json-parser"]
+      }
+    }
+  },
+
+  "workflow_state": {
+    "description": "整体工作流状态",
+    "schema": {
+      "workflow_id": "string (uuid)",
+      "name": "string",
+      "status": "enum: [idle, running, paused, completed, failed]",
+      "created_at": "ISO 8601 datetime",
+      "updated_at": "ISO 8601 datetime",
+      "nodes": "array of node objects",
+      "edges": "array of edge objects",
+      "current_node": "string (当前执行的节点 ID)",
+      "execution_history": "array of execution records",
+      "metadata": {
+        "total_evolutions": "number",
+        "total_skills_learned": "number",
+        "success_rate": "number (0-1)"
+      }
+    }
+  }
+}
