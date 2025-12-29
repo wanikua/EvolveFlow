@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { WorkflowState, FlowNode, FlowEdge, Skill, MCPTool } from '../types'
 import { workflowAPI, skillAPI, toolAPI } from '../api/client'
+import { notify } from '../components/NotificationContainer'
 
 interface WorkflowStore {
   currentWorkflow: WorkflowState | null
@@ -40,18 +41,55 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
   setCurrentWorkflow: (workflow) => set({ currentWorkflow: workflow }),
 
   createWorkflow: async (name) => {
-    const workflow = await workflowAPI.create(name)
-    set({ currentWorkflow: workflow })
+    try {
+      const workflow = await workflowAPI.create(name)
+      set({ currentWorkflow: workflow })
+      notify.success('Workflow Created', `"${name}" has been created successfully`)
+    } catch (error) {
+      notify.error(
+        'Failed to Create Workflow',
+        'Could not create workflow. Check if backend is running at http://localhost:8000',
+        {
+          actionLabel: 'View Docs',
+          onAction: () => window.open('http://localhost:8000/docs', '_blank'),
+        }
+      )
+      throw error
+    }
   },
 
   loadWorkflow: async (id) => {
-    const workflow = await workflowAPI.get(id)
-    set({ currentWorkflow: workflow })
+    try {
+      const workflow = await workflowAPI.get(id)
+      set({ currentWorkflow: workflow })
+    } catch (error) {
+      notify.error(
+        'Failed to Load Workflow',
+        `Could not load workflow "${id}". It may have been deleted or backend is offline.`,
+        {
+          actionLabel: 'Reload Page',
+          onAction: () => window.location.reload(),
+        }
+      )
+      throw error
+    }
   },
 
   loadWorkflows: async () => {
-    const workflows = await workflowAPI.list()
-    set({ workflows })
+    try {
+      const workflows = await workflowAPI.list()
+      set({ workflows })
+    } catch (error) {
+      notify.error(
+        'Failed to Load Workflows',
+        'Could not connect to backend. Make sure it is running at http://localhost:8000',
+        {
+          actionLabel: 'Retry',
+          onAction: () => get().loadWorkflows(),
+        }
+      )
+      throw error
+    }
   },
 
   addNode: (node) => {
@@ -123,7 +161,16 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
 
   executeNode: async (nodeId, inputs) => {
     const { currentWorkflow, updateNode } = get()
-    if (!currentWorkflow) return
+    if (!currentWorkflow) {
+      notify.warning('No Workflow Selected', 'Please create or load a workflow first')
+      return
+    }
+
+    const node = currentWorkflow.nodes.find((n) => n.id === nodeId)
+    if (!node) {
+      notify.error('Node Not Found', `Could not find node with ID: ${nodeId}`)
+      return
+    }
 
     set({ isExecuting: true })
 
@@ -135,29 +182,65 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
       )
 
       if (result.evolution_triggered) {
+        notify.success(
+          'Evolution Triggered!',
+          `Created ${result.new_nodes?.length || 0} new nodes to handle the task`
+        )
         result.new_nodes.forEach((node: FlowNode) => {
           get().addNode(node)
         })
         result.new_edges.forEach((edge: FlowEdge) => {
           get().addEdge(edge)
         })
+      } else {
+        notify.success('Node Executed', `"${node.data.label}" completed successfully`)
       }
 
       await get().loadWorkflow(currentWorkflow.workflow_id)
-    } catch (error) {
+    } catch (error: any) {
       console.error('Node execution failed:', error)
+      notify.error(
+        'Execution Failed',
+        error.message || 'Node execution encountered an error. Check console for details.',
+        {
+          actionLabel: 'View Logs',
+          onAction: () => console.log('Full error:', error),
+        }
+      )
     } finally {
       set({ isExecuting: false })
     }
   },
 
   loadSkills: async () => {
-    const skills = await skillAPI.list()
-    set({ skills })
+    try {
+      const skills = await skillAPI.list()
+      set({ skills })
+    } catch (error) {
+      notify.error(
+        'Failed to Load Skills',
+        'Could not load skill library. Backend may be offline.',
+        {
+          actionLabel: 'Retry',
+          onAction: () => get().loadSkills(),
+        }
+      )
+    }
   },
 
   loadTools: async () => {
-    const tools = await toolAPI.list()
-    set({ tools })
+    try {
+      const tools = await toolAPI.list()
+      set({ tools })
+    } catch (error) {
+      notify.warning(
+        'Failed to Load Tools',
+        'MCP tools could not be loaded. Some features may be unavailable.',
+        {
+          actionLabel: 'Retry',
+          onAction: () => get().loadTools(),
+        }
+      )
+    }
   },
 }))
