@@ -74,43 +74,65 @@ Evolution triggers on:
 - Tracks success count
 - Stores workflow patterns and code
 
+### 5. Claude Code Bridge (NEW!)
+
+**Real-time telemetry system** that captures Claude Code sessions:
+
+- **Telemetry Capture**: Parses Claude Code output for reasoning and tool calls
+- **Live Visualization**: See agent thoughts and actions in real-time on canvas
+- **Skill Extraction**: Automatically detects successful patterns and creates reusable skills
+- **MCP Mapping**: Maps Claude Code tools to MCP format
+- **WebSocket Streaming**: Live updates to frontend
+
+See `BRIDGE_INTEGRATION.md` for complete guide.
+
 ## Quick Start
 
-### Backend Setup
+### All-in-One Startup (Recommended)
+
+```bash
+# Start all services (Backend + Bridge + Frontend)
+./START_ALL.sh
+```
+
+Then open http://localhost:3000
+
+### Manual Setup
+
+**Backend Setup**
 
 ```bash
 cd backend
-
-# Create virtual environment
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies
 pip install -r requirements.txt
-
-# Run server
 python main.py
 # Server runs at http://localhost:8000
 ```
 
-### Frontend Setup
+**Bridge Setup** (Optional - for Claude Code integration)
+
+```bash
+cd bridge
+pip install -r requirements.txt
+python realtime_streamer.py
+# Server runs at http://localhost:8001
+```
+
+**Frontend Setup**
 
 ```bash
 cd frontend
-
-# Install dependencies
 npm install
-
-# Run dev server
 npm run dev
 # App runs at http://localhost:3000
 ```
 
-### Access
+### Access Points
 
 - Frontend: http://localhost:3000
 - API Docs: http://localhost:8000/docs
-- Health Check: http://localhost:8000/health
+- Bridge API: http://localhost:8001/health (if running)
 
 ## Usage
 

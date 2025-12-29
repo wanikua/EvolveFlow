@@ -68,6 +68,18 @@ async def list_workflows():
     return list(workflows.values())
 
 
+@app.put("/api/workflows/{workflow_id}", response_model=WorkflowState)
+async def update_workflow(workflow_id: str, workflow: WorkflowState):
+    """Update existing workflow"""
+
+    if workflow_id not in workflows:
+        raise HTTPException(status_code=404, detail="Workflow not found")
+
+    workflows[workflow_id] = workflow
+    logger.info(f"Updated workflow: {workflow_id}")
+    return workflow
+
+
 @app.delete("/api/workflows/{workflow_id}")
 async def delete_workflow(workflow_id: str):
     """Delete workflow"""

@@ -3,20 +3,36 @@ import { ReactFlowProvider } from 'reactflow'
 import Canvas from './components/Canvas'
 import Toolbar from './components/Toolbar'
 import SkillLibrary from './components/SkillLibrary'
+import LiveSession from './components/LiveSession'
 import { useWorkflowStore } from './store/workflow'
 
 function App() {
-  const { createWorkflow, loadTools } = useWorkflowStore()
+  const { createWorkflow, loadWorkflows, loadWorkflow, setCurrentWorkflow, loadTools } = useWorkflowStore()
   const [isSkillLibraryOpen, setIsSkillLibraryOpen] = useState(false)
 
   useEffect(() => {
     const initializeApp = async () => {
-      await createWorkflow('My First Workflow')
+      // Load existing workflows first
+      await loadWorkflows()
+
+      // Get workflows from store
+      const workflows = useWorkflowStore.getState().workflows
+
+      if (workflows && workflows.length > 0) {
+        // Load the first workflow (which has our demo nodes)
+        console.log('Loading existing workflow:', workflows[0].workflow_id)
+        await loadWorkflow(workflows[0].workflow_id)
+      } else {
+        // Only create new if none exist
+        console.log('Creating new workflow')
+        await createWorkflow('My First Workflow')
+      }
+
       await loadTools()
     }
 
     initializeApp()
-  }, [createWorkflow, loadTools])
+  }, [])
 
   return (
     <div className="w-screen h-screen flex flex-col">
@@ -44,6 +60,8 @@ function App() {
           isOpen={isSkillLibraryOpen}
           onClose={() => setIsSkillLibraryOpen(false)}
         />
+
+        <LiveSession bridgeUrl="http://localhost:8001" />
       </div>
     </div>
   )
